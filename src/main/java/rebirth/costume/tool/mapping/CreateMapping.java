@@ -23,10 +23,8 @@ public class CreateMapping {
     newShirts = ProcessCtmFile.execute(newCtmPath);
     String oldBoneSet = oldShirts.get(0).getBoneSetName();
     String newBoneSet = newShirts.get(0).getBoneSetName();
-    //System.out.println(String.format("%s to %s", oldBoneSet, newBoneSet));
     for (Component oldC : oldShirts) {
       if (oldC.getMaskName() != null) {
-        //System.out.println("trying to match mask");
         // Match a Mask entry
         Component match = findMaskComponent(newBoneSet, oldC.getGeoSetDisplayName(), oldC.getMaskDisplayName(), newShirts);
         if (match != null) {
@@ -55,24 +53,15 @@ public class CreateMapping {
           im.setOldGeo(oldC.getInfoGeo());
           im.setOldTex1(oldC.getInfoTex1());
           im.setOldTex2(oldC.getInfoTex2());
-          //if ("mask".equalsIgnoreCase(oldC.getInfoTex2())) {
-          //  im.setOldTex2("None");
-          //}
           im.setNewGeoSetDisplayName(match.getGeoSetDisplayName());
           im.setNewBoneSetName(match.getBoneSetName());
           im.setNewGeo(match.getInfoGeo());
           im.setNewTex1(match.getInfoTex1());
           im.setNewTex2(match.getInfoTex2());
-          //if ("mask".equalsIgnoreCase(match.getInfoTex2())) {
-          //  im.setNewTex2("None");
-          //}
           ctmMappings.add(im);
         }
       }
     }
-    //for (MaskMapping mm : maskMappings ) {
-    //  System.out.println(mm);
-    //}
     List<InfoMapping> newMappings = new ArrayList<InfoMapping>();
     for (InfoMapping im : ctmMappings) {
       if ("mask".equalsIgnoreCase(im.getOldTex2())) {
@@ -96,7 +85,6 @@ public class CreateMapping {
         newInfoMap.setOldTex2(mm.getOldMaskName());
         newInfoMap.setNewTex2(mm.getNewMaskName());
         newMappings.add(newInfoMap);
-        //System.out.println(newInfoMap);
       }
     }
     return newMappings;

@@ -30,12 +30,9 @@ public class ProcessIncludes {
     return expandedFileContent;
   }
   private static String processInclude(String includeString) {
-    System.out.println(includeString);
     String includeContent = "";
       try {
-        String cp = ProcessIncludes.class.getResource(includeString).getPath();
-        System.out.println(cp);
-        String fileText = new String(Files.readAllBytes(Paths.get(cp)));
+        String fileText = new String(Files.readAllBytes(Paths.get(includeString)));
         Scanner scanner = new Scanner(fileText);
         while (scanner.hasNextLine()) {
           String line = scanner.nextLine().trim();

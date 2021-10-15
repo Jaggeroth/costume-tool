@@ -9,7 +9,6 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import rebirth.costume.tool.CostumeUpdaterController.AboutWindow;
 import rebirth.costume.tool.mapping.ProcessCostumeFile;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
@@ -41,12 +40,11 @@ public class CostumeUpdaterController  {
         this.setScene(scene);
         this.setResizable(false);
       } catch (IOException e) {
-        //
+        // Do nothing
       }
     }
   }
   AboutWindow popup = new AboutWindow();
-
   @FXML 
   private VBox vBox;
   @FXML 
@@ -133,16 +131,24 @@ public class CostumeUpdaterController  {
     if (event.getSource() instanceof Button) {
       Button pressedB = (Button)event.getSource();
       if ("sourceButton".equalsIgnoreCase(pressedB.getId())) {
+        if (!"Unknown".equalsIgnoreCase(sourceLabel.getText())) {
+          directoryChooser.setInitialDirectory(new File(sourceLabel.getText()));
+        }
         selectedDirectory = directoryChooser.showDialog(stage);
         if (selectedDirectory != null) {
           sourceLabel.setText(selectedDirectory.getAbsolutePath());
+          progressBar.setProgress(0);
         } else {
           sourceLabel.setText("Unknown");
         }
       } else if ("targetButton".equalsIgnoreCase(pressedB.getId())) {
+        if (!"Unknown".equalsIgnoreCase(targetLabel.getText())) {
+          directoryChooser.setInitialDirectory(new File(targetLabel.getText()));
+        }
         selectedDirectory = directoryChooser.showDialog(stage);
         if (selectedDirectory != null) {
           targetLabel.setText(selectedDirectory.getAbsolutePath());
+          progressBar.setProgress(0);
         } else {
           targetLabel.setText("Unknown");
         }
@@ -159,7 +165,6 @@ public class CostumeUpdaterController  {
               prg++;
               String inFile = costumeFile.getAbsolutePath();
               String outFile = newFileName(targetLabel.getText(), costumeFile.getName());
-              //System.out.println(outFile);
               String content;
               try {
                 content = pcf.execute(inFile);
@@ -191,32 +196,6 @@ public class CostumeUpdaterController  {
       }
       setExecuteButton();
     }
-  }
-  private void executeFunction() {
-    ProcessCostumeFile pcf = new ProcessCostumeFile();
-    List<File> costumeFiles = listFiles(sourceLabel.getText());
-    int prg = 0;
-    for (File costumeFile : costumeFiles) {
-      prg++;
-      String inFile = costumeFile.getAbsolutePath();
-      String outFile = newFileName(targetLabel.getText(), costumeFile.getName());
-      //System.out.println(outFile);
-      String content;
-      try {
-        content = pcf.execute(inFile);
-        writeFile(outFile, content);
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
-      setprogressBar(prg, costumeFiles.size());
-    }
-  }
-  private void setprogressBar(int count, int size) {
-    double c = (double)count;
-    double s = (double)size;
-    double val = c/s;
-    System.out.println(val);
-    progressBar.setProgress(c/s);
   }
   /*
    * Look for costume files

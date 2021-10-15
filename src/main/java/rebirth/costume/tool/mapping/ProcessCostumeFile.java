@@ -1,14 +1,17 @@
 package rebirth.costume.tool.mapping;
 
-import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -21,6 +24,7 @@ public class ProcessCostumeFile {
   private static final String HEAD_PATTER = "\\{(.*?)CostumePart";
   private static final String PART_PATTERN = "CostumePart \"\"(.*?)\\{(.*?)\\}";
   private List<InfoMapping> componentMappings;
+  private Map<String, String> boneSetMapping;
 
   public String execute(String costumeFilePath) throws IOException {
     CostumeFile cf = null;
@@ -64,8 +68,12 @@ public class ProcessCostumeFile {
   public void setComponentMappings(List<InfoMapping> componentMappings) {
     this.componentMappings = componentMappings;
   }
-  public void setComponentMappings(ArrayList<InfoMapping> componentMappings) {
-    this.componentMappings = componentMappings;
+  public Map<String, String> getBoneSetMapping() {
+    return boneSetMapping;
+  }
+
+  public void setBoneSetMapping(Map<String, String> boneSetMapping) {
+    this.boneSetMapping = boneSetMapping;
   }
 
   private CostumePart processCostumePart(String partText, boolean update) {
@@ -122,10 +130,14 @@ public class ProcessCostumeFile {
     return result;
   }
   private CostumePart updateAttributes(CostumePart old) {
+    /**
+     * Search through the mappings table to find the costume element.
+     * Then transfer the new elements into the costume part. 
+     */
     for (InfoMapping map : this.componentMappings) {
       if (old.getBodySetName() != null) {
-        if (old.getDisplayName().equalsIgnoreCase(map.getOldGeoSetDisplayName())) {
-          if (old.getBodySetName().equalsIgnoreCase(map.getOldBoneSetName()) &&
+        if (isMatch(old.getDisplayName(), map.getOldGeoSetDisplayName())) {
+          if (isMatch(old.getBodySetName(), map.getOldBoneSetName()) &&
               old.getGeometry().equalsIgnoreCase(map.getOldGeo()) &&
               old.getTexture1().equalsIgnoreCase(map.getOldTex1()) &&
               old.getTexture2().equalsIgnoreCase(map.getOldTex2())) {
@@ -138,26 +150,40 @@ public class ProcessCostumeFile {
         }
       }
     }
-    if ("Shirts".equalsIgnoreCase(old.getBodySetName())) {
-      old.setBodySetName("Asym Shirts");
-    } else if ("Tight".equalsIgnoreCase(old.getBodySetName())) {
-      old.setBodySetName("AsymTight");
-    } else if ("Tights/Skin".equalsIgnoreCase(old.getBodySetName())) {
-      old.setBodySetName("AsymTights/skin");
-    } else if ("Jackets".equalsIgnoreCase(old.getBodySetName())) {
-      old.setBodySetName("AsymJackets");
-    } else if ("Pants".equalsIgnoreCase(old.getBodySetName())) {
-      old.setBodySetName("PantsAsym");
-    } else if ("PantsTight".equalsIgnoreCase(old.getBodySetName())) {
-      old.setBodySetName("PantsTightAsym");
-    } else if ("\"Tights/skin asym\"".equalsIgnoreCase(old.getBodySetName())) {
-      old.setBodySetName("AsymTights/Skin");
-    } else if ("Robe".equalsIgnoreCase(old.getBodySetName())) {
-      old.setBodySetName("Asym Robe");
-    } else if ("NewSkirts".equalsIgnoreCase(old.getBodySetName())) {
-      old.setBodySetName("NewSkirtsAsym");
+    /*
+     * We need to map old BoneSets to new BoneSets as not
+     * all costume elements are covered by the mappings.
+     */
+    if (old.getBodySetName() != null) {
+      String oldBs = cleanParam(old.getBodySetName().toLowerCase());
+      if (boneSetMapping.containsKey(oldBs)) {
+        old.setBodySetName(boneSetMapping.get(oldBs));
+      }
     }
     return old;
+  }
+  /*
+   * Match strings but don't worry about " or case. 
+   */
+  private boolean isMatch(String part1, String part2) {
+    if (part1 == null || part2 == null)
+      return false;
+    if (part1.equalsIgnoreCase(part2))
+      return true;
+    if (cleanParam(part1).equalsIgnoreCase(cleanParam(part2)))
+      return true;
+    return false;
+  }
+
+  /*
+   * if string is encapsulated by quotes, remove them. 
+   */
+  private static String cleanParam(String line) {
+    String result = line;
+    if (result.startsWith("\"") && result.endsWith("\"")) {
+      result = result.substring(1, result.length() - 1);
+    }
+    return result;
   }
 
   private boolean set(Object object, String fieldName, Object fieldValue) {
@@ -177,43 +203,51 @@ public class ProcessCostumeFile {
     return false;
   }
 
+  /*
+   * Simple attempt at converting old v1 costumes to new v2.
+   */
   private List<CostumePart> convert28to33(List<CostumePart> oldCostumeParts) {
-    List<CostumePart> newCostumeParts = new ArrayList<CostumePart>();
-    // 1 to 19 same as before
-    for (int x=0; x<28; x++) {
-      CostumePart newPart = CostumePart.clone(oldCostumeParts.get(x));
-      newCostumeParts.add(newPart);
-    }
-    // Add in the right glove
-    CostumePart rightGlove = CostumePart.clone(oldCostumeParts.get(3));
-    rightGlove.setDisplayName("\"Right Glove\"");
-    rightGlove.setGeometry(rightGlove.getGeometry().replace('*', 'R'));
-    newCostumeParts.add(rightGlove);
-    // add in the left glove
-    CostumePart leftGlove = CostumePart.clone(oldCostumeParts.get(3));
-    leftGlove.setGeometry(leftGlove.getGeometry().replace('*', 'L'));
-    leftGlove.setDisplayName("\"Left Glove\"");
-    newCostumeParts.add(leftGlove);
-    // add some extra empty parts for good luck
-    for (int x=28; x<oldCostumeParts.size(); x++) {
-      CostumePart newPart = CostumePart.clone(oldCostumeParts.get(x));
-      if (newPart.getGeometry() == null) {
-        newPart.setFx("None");
-        newPart.setGeometry("None");
-        newPart.setTexture1("None");
-        newPart.setTexture2("None");
+    if (oldCostumeParts.size()>27) {
+      List<CostumePart> newCostumeParts = new ArrayList<CostumePart>();
+      // 1 to 19 same as before
+      for (int x=0; x<28; x++) {
+        CostumePart newPart = CostumePart.clone(oldCostumeParts.get(x));
+        newCostumeParts.add(newPart);
       }
-      newCostumeParts.add(newPart);
+      // Add in the right glove
+      CostumePart rightGlove = CostumePart.clone(oldCostumeParts.get(3));
+      rightGlove.setDisplayName("\"Right Glove\"");
+      rightGlove.setGeometry(rightGlove.getGeometry().replace('*', 'R'));
+      newCostumeParts.add(rightGlove);
+      // add in the left glove
+      CostumePart leftGlove = CostumePart.clone(oldCostumeParts.get(3));
+      leftGlove.setGeometry(leftGlove.getGeometry().replace('*', 'L'));
+      leftGlove.setDisplayName("\"Left Glove\"");
+      newCostumeParts.add(leftGlove);
+      // add some extra empty parts for good luck
+      for (int x=28; x<oldCostumeParts.size(); x++) {
+        CostumePart newPart = CostumePart.clone(oldCostumeParts.get(x));
+        if (newPart.getGeometry() == null) {
+          newPart.setFx("None");
+          newPart.setGeometry("None");
+          newPart.setTexture1("None");
+          newPart.setTexture2("None");
+        }
+        newCostumeParts.add(newPart);
+      }
+      for (int x=0; x<3; x++) {
+        CostumePart newPart = new CostumePart();
+        newPart.setColor1("0,  0,  0");
+        newPart.setColor2("0,  0,  0");
+        newPart.setColor3("0,  0,  0");
+        newPart.setColor4("0,  0,  0");
+        newCostumeParts.add(newPart);
+      }
+      return newCostumeParts;
+    } else {
+      System.out.println("UNKNOWN FORMAT");
+      return oldCostumeParts;
     }
-    for (int x=0; x<3; x++) {
-      CostumePart newPart = new CostumePart();
-      newPart.setColor1("0,  0,  0");
-      newPart.setColor2("0,  0,  0");
-      newPart.setColor3("0,  0,  0");
-      newPart.setColor4("0,  0,  0");
-      newCostumeParts.add(newPart);
-    }
-    return newCostumeParts;
   }
 
   private boolean isFemale(CostumeFile costumeFile) {
@@ -225,13 +259,13 @@ public class ProcessCostumeFile {
 
   public void initialise() throws IOException {
     /*
-     * Deserialised object
+     * Deserialised Mappings
      */
     ArrayList<InfoMapping> maps = new ArrayList<>();
     try {
       InputStream fis = getClass().getClassLoader().getResourceAsStream("mappingData");
       ObjectInputStream ois = new ObjectInputStream(fis);
-      maps = (ArrayList) ois.readObject();
+      maps = (ArrayList<InfoMapping>) ois.readObject();
       ois.close();
       fis.close();
     } catch (IOException ioe) {
@@ -243,5 +277,59 @@ public class ProcessCostumeFile {
         return;
     }
     setComponentMappings(maps);
+    /**
+     * Set BoneSetMappings
+     */
+    boneSetMapping = new HashMap<String, String>();
+    for (InfoMapping im : getComponentMappings()) {
+      String oldBs = im.getOldBoneSetName().toLowerCase();
+      if (!boneSetMapping.containsKey(oldBs)) {
+        boneSetMapping.put(oldBs, im.getNewBoneSetName());
+      }
+    }
+  }
+  /**
+   * Process the CTM files to produce a mapping of costume parts.
+   * The serialise the data.
+   * @throws IOException
+   */
+  public void export() throws IOException {
+    // CHEST
+    setComponentMappings(CreateMapping.execute("female-old-chests\\menu_armored.ctm", "female-asym-chests\\menu_armored_asym.ctm"));
+    setComponentMappings(CreateMapping.execute("female-old-chests\\menu_baggy.ctm", "female-asym-chests\\menu_baggy_asym.ctm", getComponentMappings()));
+    setComponentMappings(CreateMapping.execute("female-old-chests\\menu_jackets.ctm", "female-asym-chests\\menu_jackets_asym.ctm", getComponentMappings()));
+    setComponentMappings(CreateMapping.execute("female-old-chests\\menu_jackets_sleeveless.ctm", "female-asym-chests\\menu_jackets_sleeveless_asym.ctm", getComponentMappings()));
+    setComponentMappings(CreateMapping.execute("female-old-chests\\Menu_Magic_Coat.ctm", "female-asym-chests\\menu_magic_coat_asym.ctm", getComponentMappings()));
+    setComponentMappings(CreateMapping.execute("female-old-chests\\menu_robes.ctm", "female-asym-chests\\menu_robes_asym.ctm", getComponentMappings()));
+    setComponentMappings(CreateMapping.execute("female-old-chests\\menu_robes_sleeveless.ctm", "female-asym-chests\\menu_robes_sleeveless_asym.ctm", getComponentMappings()));
+    setComponentMappings(CreateMapping.execute("female-old-chests\\menu_roboticarm1.ctm", "female-asym-chests\\menu_roboticarm1_asym.ctm", getComponentMappings()));
+    setComponentMappings(CreateMapping.execute("female-old-chests\\menu_roboticarm2.ctm", "female-asym-chests\\menu_roboticarm2_asym.ctm", getComponentMappings()));
+    setComponentMappings(CreateMapping.execute("female-old-chests\\menu_roboticarm3.ctm", "female-asym-chests\\menu_roboticarm3_asym.ctm", getComponentMappings()));
+    setComponentMappings(CreateMapping.execute("female-old-chests\\menu_shirts.ctm", "female-asym-chests\\menu_shirts_asym.ctm", getComponentMappings()));
+    setComponentMappings(CreateMapping.execute("female-old-chests\\menu_tight.ctm", "female-asym-chests\\menu_tight_asym.ctm", getComponentMappings()));
+    setComponentMappings(CreateMapping.execute("female-old-chests\\menu_tights_skin.ctm", "female-asym-chests\\menu_tights_skin_asym.ctm", getComponentMappings()));
+    setComponentMappings(CreateMapping.execute("female-old-chests\\menu_trench_coat.ctm", "female-asym-chests\\menu_trench_coat_asym.ctm", getComponentMappings()));
+    setComponentMappings(CreateMapping.execute("female-old-chests\\menu_unique.ctm", "female-asym-chests\\menu_unique_asym.ctm", getComponentMappings()));
+    // HIPS
+    setComponentMappings(CreateMapping.execute("female-old-hips\\menu_armored.ctm", "female-asym-hips\\menu_armored_asym.ctm", getComponentMappings()));
+    setComponentMappings(CreateMapping.execute("female-old-hips\\menu_monstrous.ctm", "female-asym-hips\\menu_monstrous_asym.ctm", getComponentMappings()));
+    setComponentMappings(CreateMapping.execute("female-old-hips\\menu_pantstight.ctm", "female-asym-hips\\menu_pantstight_asym.ctm", getComponentMappings()));
+    setComponentMappings(CreateMapping.execute("female-old-hips\\menu_pants_all.ctm", "female-asym-hips\\menu_pants_all_asym.ctm", getComponentMappings()));
+    setComponentMappings(CreateMapping.execute("female-old-hips\\menu_skirts01.ctm", "female-asym-hips\\menu_skirts01_asym.ctm", getComponentMappings()));
+    setComponentMappings(CreateMapping.execute("female-old-hips\\menu_tight.ctm", "female-asym-hips\\menu_tight_asym.ctm", getComponentMappings()));
+    setComponentMappings(CreateMapping.execute("female-old-hips\\menu_tights_skin.ctm", "female-asym-hips\\menu_tights_skin_asym.ctm", getComponentMappings()));
+    setComponentMappings(CreateMapping.execute("female-old-hips\\menu_tuckedin.ctm", "female-asym-hips\\menu_tuckedin_asym.ctm", getComponentMappings()));
+    // Manual mappings
+    setComponentMappings(CreateMapping.execute("manual-mappings\\old-parts.ctm", "manual-mappings\\new-parts.ctm", getComponentMappings()));
+    // Serialise.
+    try {
+      FileOutputStream fos = new FileOutputStream("mappingData");
+      ObjectOutputStream oos = new ObjectOutputStream(fos);
+      oos.writeObject(getComponentMappings());
+      oos.close();
+      fos.close();
+    } catch (IOException ioe) {
+        ioe.printStackTrace();
+    }
   }
 }

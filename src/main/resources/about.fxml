@@ -14,7 +14,7 @@
          </font>
       </Label>
       <Label alignment="TOP_LEFT" layoutX="14.0" layoutY="74.0" prefHeight="55.0" prefWidth="322.0" text="This is the Rebirth Costume Tool designed to repair and translate older versions of City of Heroes costume files for use with the latest version of Rebirth's City of Heroes." wrapText="true" />
-      <Label layoutX="126.0" layoutY="51.0" text="BETA Version 0.1">
+      <Label layoutX="126.0" layoutY="51.0" text="BETA Version 0.2">
          <font>
             <Font name="System Bold" size="12.0" />
          </font>

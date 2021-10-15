@@ -130,10 +130,6 @@ public class ProcessCtmFile {
       }
     }
     scanner.close();
-    //System.out.println("INFO & MASK");
-    //for (Component c : components) {
-    //  System.out.println(c);
-    //}
     return components;
   }
 
@@ -151,12 +147,6 @@ public class ProcessCtmFile {
     if (result.endsWith(".tga")) {
       result = result.substring(0, result.length() - 4);
     }
-    //if (result.endsWith("__PanelEmblemSplit")) {
-    //  result = result.substring(0, result.length() - 18);
-    //}
-    //if (result.endsWith("_Mask")) {
-    //  result = result.substring(0, result.length() - 5);
-    //}
     return result;
     
   }
